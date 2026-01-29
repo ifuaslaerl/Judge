@@ -1,0 +1,91 @@
+================================================================================
+DEVELOPMENT PLAN: JUDGE PLATFORM
+================================================================================
+Target: Self-hosted Competitive Programming Platform
+Language: Go 1.25.6
+Database: SQLite (WAL Mode)
+Architecture: Zero Trust (Cloudflare) -> Local Server (HTTPS) -> Buffered Channel
+
+PHASE 1: SCAFFOLDING & INFRASTRUCTURE
+--------------------------------------------------------------------------------
+1. Project Initialization
+   - [ ] Initialize Go module: `go mod init github.com/ifuaslaerl/Judge` 
+   - [ ] Configure `.gitignore` for `storage/`, `certs/`, and `bin/` .
+
+2. Directory Structure Setup
+   - [ ] Create persistent storage: `mkdir -p storage/db storage/submissions` .
+   - [ ] Create certificate store: `mkdir certs` .
+
+3. Security Basics (Internal HTTPS)
+   - [ ] Generate self-signed TLS certificates (`server.crt`, `server.key`) for local port :8443 .
+   - [ ] Configure Go HTTP server to listen on :8443 using these certs.
+
+PHASE 2: DATABASE & DATA MODEL
+--------------------------------------------------------------------------------
+1. SQLite Configuration
+   - [ ] Initialize SQLite connection.
+   - [ ] Enforce settings: `PRAGMA journal_mode=WAL;` and `busy_timeout=5000` .
+
+2. Schema Migration
+   - [ ] Create Table `Users`: `id, username, password_hash` .
+   - [ ] Create Table `Sessions`: `token` (PK), `user_id` .
+   - [ ] Create Table `Problems`: `id, letter_code, time_limit, pdf_path` .
+   - [ ] Create Table `Submissions`: `id, user_id, problem_id, status, file_path, created_at` .
+
+PHASE 3: AUTHENTICATION (PLATFORM LEVEL)
+--------------------------------------------------------------------------------
+Note: External auth is handled by Cloudflare Zero Trust .
+This phase implements the internal application login.
+
+1. Session Management
+   - [ ] Implement persistent session cookie logic (valid indefinitely) .
+   - [ ] Implement Admin CLI command `--flush-sessions` to truncate the Sessions table .
+
+2. Middleware
+   - [ ] Create Auth Middleware to check session tokens against the DB.
+   - [ ] Implement submission cap check (Max 100 submissions per user) .
+
+PHASE 4: THE SUBMISSION PIPELINE (CORE)
+--------------------------------------------------------------------------------
+1. Buffered Queue
+   - [ ] Initialize a Go Buffered Channel with capacity **5000** .
+
+2. Endpoint: `POST /submit/[id]`
+   - [ ] Step 1: Receive multipart file upload to memory buffer.
+   - [ ] Step 2: INSERT record into `Submissions` (Status: PENDING) .
+   - [ ] Step 3: Write file to disk `./storage/submissions/[id].cpp`.
+         - *Error Handling:* If disk write fails, DELETE DB record immediately (Rollback) .
+   - [ ] Step 4: Push `[id]` to the Buffered Channel .
+   - [ ] Step 5: Redirect user to `/status` .
+
+PHASE 5: THE JUDGE WORKER
+--------------------------------------------------------------------------------
+1. Worker Loop
+   - [ ] Create a goroutine that ranges over the Buffered Channel .
+
+2. Execution Logic
+   - [ ] Fetch: Retrieve file path from DB based on ID.
+   - [ ] Execute: Run code inside Isolate Sandbox .
+   - [ ] Update: Write verdict (AC/WA) back to `Submissions` table .
+
+PHASE 6: OPERATIONAL SAFETY & MAINTENANCE
+--------------------------------------------------------------------------------
+1. "The Reaper" (Startup Routine)
+   - [ ] Implement a boot scanner for `./storage/submissions/`.
+   - [ ] Logic: Delete any file on disk that does not have a corresponding ID in the DB .
+
+2. Crash & Recovery Policy
+   - [ ] Verify that RAM Queue is non-persistent (Accept data loss on crash) .
+
+3. Maintenance Scripts
+   - [ ] Implement "Weekly Wipe" logic: Delete all files -> Wipe DB .
+
+PHASE 7: FRONTEND & DEPLOYMENT
+--------------------------------------------------------------------------------
+1. User Interface
+   - [ ] Dashboard: List problems and PDF links (`GET /problems/[id]/pdf`) .
+   - [ ] Status Page: Poll `Submissions` table for "Live Status" .
+
+2. Cloudflare Integration
+   - [ ] Configure Cloudflare Tunnel to point to `https://localhost:8443` .
+   - [ ] Verify End-to-End Encryption (Client -> CF -> Server) .
