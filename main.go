@@ -6,6 +6,10 @@ import (
 )
 
 func main() {
+    
+    InitDB()
+    defer DB.Close()
+
     // Simple health check handler
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
         w.Write([]byte("Judge Platform Online"))
