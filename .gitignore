@@ -1,0 +1,21 @@
+# --- System Specifics ---
+storage/db/*.sqlite
+storage/db/*.db
+storage/db/*.db-wal
+storage/db/*.db-shm
+
+# We keep the folder structure (.keep), but ignore the files
+storage/submissions/*
+!storage/submissions/.keep
+
+certs/*.pem
+certs/*.key
+certs/*.crt
+
+# --- Go Standard ---
+/bin/
+/dist/
+*.exe
+*.test
+vendor/
+go.sum

@@ -1,0 +1,123 @@
+================================================================================
+PROJECT SPECIFICATION: THE LAST JUDGE
+================================================================================
+
+1. OVERVIEW
+--------------------------------------------------------------------------------
+A self-hosted competitive programming platform for ~50 users.
+Key Features: Web Interface, Persistent Auth, Buffered Concurrency (High Capacity).
+Language: Go (Server) + HTML Templates (Frontend).
+Hosting Policy: MUST run on Personal Network (Home/VPS). NOT on University Network.
+
+2. THE ARCHITECTURE
+--------------------------------------------------------------------------------
+[User's Browser]                        [Your Home Server]
++------------------+                    +---------------------------+
+|                                       |
+| --(HTTPS / 443)--> | Cloudflare Tunnel | --(HTTPS)--> | Go Web Server (:8443) |
+|                    |                  +-------------+-------------+
+(Zero Trust Auth)    |                                |
+                     |                                v
+                     |                  +---------------------------+
+                     |                  |                           |
+                     |                  | SQLite Database (Meta)    |
+                     | + File System (Source)    |
+                     |                  +-------------+-------------+
+                     |                                |
+                     |                                v
+                     |                  +---------------------------+
+                     |                  |                           |
+                     |                  | Buffered Channel (RAM)    |
+                     |                  | *Size: 5000 Slots         |
+                     |                  +-------------+-------------+
+                     |                                |
+                     |                                v
+                                                [Judge Worker]
+
+3. THE CLIENT (Standard Web Browser)
+--------------------------------------------------------------------------------
+*No custom binary required.*
+A. User Flow
+   1. **Access:** User visits `https://[your-contest].trycloudflare.com`.
+   2. **Zero Trust Gate:** Cloudflare Access challenges user (Email OTP / PIN).
+   3. **App Login:** Simple password entry (Platform Level).
+   4. **Dashboard:**
+      - View problems / PDF statements.
+      - Upload source code.
+      - View "Live Status".
+
+4. THE SERVER APPLICATION (Go HTTPS Server)
+--------------------------------------------------------------------------------
+A. Authentication Logic
+   - *Method:* Persistent Session Cookie.
+   - *Storage:* SQLite Table `Sessions` (Token, UserID).
+   - *Validity:* Indefinite. Tokens persist across server restarts.
+   - *Reset:* Tokens cleared only via Admin CLI command (`--flush-sessions`).
+   - *Note:* No CSRF Protection (Accepted Risk).
+
+B. HTTP Endpoints & Reliability
+   1. `GET /problems/[id]/pdf`
+      - Reads PDF from disk.
+      - Serves with `Content-Type: application/pdf`.
+
+   2. `POST /submit/[id]` (Multipart File Upload)
+      - **Receive:** Reads uploaded file into memory buffer.
+      - **Meta (DB):** Inserts record into `Submissions` (Status: PENDING) *FIRST*.
+      - **Storage (Disk):** Saves file to `./storage/submissions/[id].cpp`.
+      - **Rollback:** If Disk Write fails, `DELETE` record from `Submissions` immediately.
+      - **Enqueue:** Pushes `[ID]` to **Buffered Go Channel**.
+      - **Capacity:** Channel size set to **5000**.
+        (Size covers Max Users [50] * Max Subs [100] = 100% Guaranteed Non-Blocking).
+      - **Response:** Redirects to `/status`.
+
+   3. `GET /status`
+      - Queries `Submissions` table.
+
+C. The Judge Worker
+   - *Input:* Loops over the Buffered Channel.
+   - *Fetch:* Reads file path from DB, loads code from Disk.
+   - *Execute:* Runs code in Isolate Sandbox.
+   - *Update:* Writes verdict (AC/WA) back to DB.
+
+D. Connectivity & Security
+   - *Tunnel:* Cloudflare Tunnel with Zero Trust Access enabled.
+   - *Encryption:* End-to-End Encryption.
+     - External: Client -> Cloudflare (HTTPS).
+     - Internal: Cloudflare -> Go Server (HTTPS via Self-Signed Cert on :8443).
+   - *Firewall Compliance:* strictly hosted off-campus to avoid policy violation.
+
+5. DATABASE SCHEMA & CONFIG
+--------------------------------------------------------------------------------
+* **Configuration:** `PRAGMA journal_mode=WAL;` (Write-Ahead Logging) + `busy_timeout=5000`.
+
+1. Users
+   - id, username, password_hash.
+
+2. Sessions
+   - token (PK), user_id.
+
+3. Submissions
+   - id, user_id, problem_id, status, file_path, created_at.
+
+4. Problems
+   - id, letter_code, time_limit, pdf_path.
+
+6. OPERATIONAL POLICIES
+--------------------------------------------------------------------------------
+* **Submission Cap:** Max 100 submissions per user (checked via DB count).
+   - *Note:* Race condition possible (Accepted Risk).
+
+* **Crash Policy:**
+   - If the server crashes, the contest is declared **OVER**.
+   - No recovery mechanism for the RAM Queue.
+
+* **Orphaned File Prevention (The Reaper):**
+   - **Startup Routine:** Server scans `./storage/submissions/` on boot.
+   - **Action:** Deletes any file that does not have a corresponding ID in the DB.
+
+* **Weekly Wipe:**
+   - **Order:**
+     1. Delete all files in `./storage/submissions/`.
+     2. Verify deletion.
+     3. Wipe DB (clearing hashes/submissions/sessions).
+   - *Reasoning:* Prevents DB records from pointing to non-existent files.
