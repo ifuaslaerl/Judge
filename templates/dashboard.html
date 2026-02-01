@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head><title>Dashboard</title></head>
+<body>
+    <h1>Problem Set</h1>
+    <a href="/status">View My Submissions</a> | <a href="/logout">Logout</a>
+    <hr>
+    <ul>
+    {{range .}}
+        <li>
+            <strong>{{.Letter}}</strong> ({{.TimeLimit}}ms) 
+            <a href="/problems/{{.ID}}/pdf">[PDF]</a>
+            <form action="/submit/{{.ID}}" method="POST" enctype="multipart/form-data" style="display:inline;">
+                <input type="file" name="code" required>
+                <button type="submit">Submit</button>
+            </form>
+        </li>
+    {{else}}
+        <p>No problems loaded yet.</p>
+    {{end}}
+    </ul>
+</body>
+</html>

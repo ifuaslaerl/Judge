@@ -61,24 +61,24 @@ PHASE 4: THE SUBMISSION PIPELINE (CORE)
 PHASE 5: THE JUDGE WORKER
 --------------------------------------------------------------------------------
 1. Worker Loop
-   - [ ] Create a goroutine that ranges over the Buffered Channel .
+   - [x] Create a goroutine that ranges over the Buffered Channel .
 
 2. Execution Logic
-   - [ ] Fetch: Retrieve file path from DB based on ID.
-   - [ ] Execute: Run code inside Isolate Sandbox .
-   - [ ] Update: Write verdict (AC/WA) back to `Submissions` table .
+   - [x] Fetch: Retrieve file path from DB based on ID.
+   - [x] Execute: Run code inside Isolate Sandbox .
+   - [x] Update: Write verdict (AC/WA) back to `Submissions` table .
 
 PHASE 6: OPERATIONAL SAFETY & MAINTENANCE
 --------------------------------------------------------------------------------
 1. "The Reaper" (Startup Routine)
-   - [ ] Implement a boot scanner for `./storage/submissions/`.
-   - [ ] Logic: Delete any file on disk that does not have a corresponding ID in the DB .
+   - [x] Implement a boot scanner for `./storage/submissions/`.
+   - [x] Logic: Delete any file on disk that does not have a corresponding ID in the DB .
 
 2. Crash & Recovery Policy
-   - [ ] Verify that RAM Queue is non-persistent (Accept data loss on crash) .
+   - [x] Verify that RAM Queue is non-persistent (Accept data loss on crash) .
 
 3. Maintenance Scripts
-   - [ ] Implement "Weekly Wipe" logic: Delete all files -> Wipe DB .
+   - [x] Implement "Weekly Wipe" logic: Delete all files -> Wipe DB .
 
 PHASE 7: FRONTEND & DEPLOYMENT
 --------------------------------------------------------------------------------

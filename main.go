@@ -10,7 +10,7 @@ import (
 func main() {
 	// 1. Initialize Database & Queue
 	InitDB()
-	InitQueue() // <--- NEW: Initialize the Buffered Channel
+	InitQueue()
 	defer DB.Close()
 
 	// 2. Parse CLI Flags
@@ -24,14 +24,28 @@ func main() {
 		os.Exit(0)
 	}
 
-	// 4. Server Setup
-	// Public Routes
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Judge Platform Online. Login required for access."))
-	})
+	// --- NEW: Phase 6 (The Reaper) ---
+	StartReaper()
 
-	// Protected Routes (Phase 4)
-	// Usage: POST /submit/1 (where 1 is problem ID)
+	// --- NEW: Phase 5 (The Worker) ---
+	// Run in a separate goroutine so it doesn't block the server
+	go StartWorker()
+
+	// 4. Server Setup
+	// Public
+	http.HandleFunc("/login", HandleLogin)
+
+	// Protected (Apply Middleware)
+	http.HandleFunc("/dashboard", AuthMiddleware(HandleDashboard))
+	http.HandleFunc("/status", AuthMiddleware(HandleStatus))
+	http.HandleFunc("/submit/", AuthMiddleware(HandleSubmission))
+
+	// Root Redirect
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	    http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+	})
+	
+	// Protected Routes
 	http.HandleFunc("/submit/", AuthMiddleware(HandleSubmission))
 
 	// Port 8443

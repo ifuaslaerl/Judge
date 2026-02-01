@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Status</title>
+    <meta http-equiv="refresh" content="5"> </head>
+<body>
+    <h1>My Submissions</h1>
+    <a href="/dashboard">Back to Problems</a>
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Problem</th>
+            <th>Verdict</th>
+            <th>Time</th>
+        </tr>
+        {{range .}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td>{{.Problem}}</td>
+            <td>{{.Status}}</td>
+            <td>{{.Time}}</td>
+        </tr>
+        {{end}}
+    </table>
+</body>
+</html>
