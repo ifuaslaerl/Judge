@@ -1,30 +1,48 @@
 package main
 
 import (
-    "log"
-    "net/http"
+	"flag"
+	"log"
+	"net/http"
+	"os"
 )
 
 func main() {
-    
-    InitDB()
-    defer DB.Close()
+	// 1. Initialize Database & Queue
+	InitDB()
+	InitQueue() // <--- NEW: Initialize the Buffered Channel
+	defer DB.Close()
 
-    // Simple health check handler
-    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-        w.Write([]byte("Judge Platform Online"))
-    })
+	// 2. Parse CLI Flags
+	flushCmd := flag.Bool("flush-sessions", false, "Truncate the Sessions table and exit")
+	flag.Parse()
 
-    // Port 8443 as specified in system_design.txt 
-    port := ":8443"
-    certFile := "certs/server.crt"
-    keyFile := "certs/server.key"
+	// 3. Execute CLI Command if requested
+	if *flushCmd {
+		log.Println("EXECUTING: Flushing all active sessions...")
+		FlushSessions()
+		os.Exit(0)
+	}
 
-    log.Printf("Starting secure server on https://localhost%s", port)
-    
-    // ListenAndServeTLS requires the cert and key generated above
-    err := http.ListenAndServeTLS(port, certFile, keyFile, nil)
-    if err != nil {
-        log.Fatalf("Failed to start server: %v", err)
-    }
+	// 4. Server Setup
+	// Public Routes
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Judge Platform Online. Login required for access."))
+	})
+
+	// Protected Routes (Phase 4)
+	// Usage: POST /submit/1 (where 1 is problem ID)
+	http.HandleFunc("/submit/", AuthMiddleware(HandleSubmission))
+
+	// Port 8443
+	port := ":8443"
+	certFile := "certs/server.crt"
+	keyFile := "certs/server.key"
+
+	log.Printf("Starting secure server on https://localhost%s", port)
+	
+	err := http.ListenAndServeTLS(port, certFile, keyFile, nil)
+	if err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }

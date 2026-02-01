@@ -38,25 +38,25 @@ Note: External auth is handled by Cloudflare Zero Trust .
 This phase implements the internal application login.
 
 1. Session Management
-   - [ ] Implement persistent session cookie logic (valid indefinitely) .
-   - [ ] Implement Admin CLI command `--flush-sessions` to truncate the Sessions table .
+   - [x] Implement persistent session cookie logic (valid indefinitely) .
+   - [x] Implement Admin CLI command `--flush-sessions` to truncate the Sessions table .
 
 2. Middleware
-   - [ ] Create Auth Middleware to check session tokens against the DB.
-   - [ ] Implement submission cap check (Max 100 submissions per user) .
+   - [x] Create Auth Middleware to check session tokens against the DB.
+   - [x] Implement submission cap check (Max 100 submissions per user) .
 
 PHASE 4: THE SUBMISSION PIPELINE (CORE)
 --------------------------------------------------------------------------------
 1. Buffered Queue
-   - [ ] Initialize a Go Buffered Channel with capacity **5000** .
+   - [x] Initialize a Go Buffered Channel with capacity **5000** .
 
 2. Endpoint: `POST /submit/[id]`
-   - [ ] Step 1: Receive multipart file upload to memory buffer.
-   - [ ] Step 2: INSERT record into `Submissions` (Status: PENDING) .
-   - [ ] Step 3: Write file to disk `./storage/submissions/[id].cpp`.
+   - [x] Step 1: Receive multipart file upload to memory buffer.
+   - [x] Step 2: INSERT record into `Submissions` (Status: PENDING) .
+   - [x] Step 3: Write file to disk `./storage/submissions/[id].cpp`.
          - *Error Handling:* If disk write fails, DELETE DB record immediately (Rollback) .
-   - [ ] Step 4: Push `[id]` to the Buffered Channel .
-   - [ ] Step 5: Redirect user to `/status` .
+   - [x] Step 4: Push `[id]` to the Buffered Channel .
+   - [x] Step 5: Redirect user to `/status` .
 
 PHASE 5: THE JUDGE WORKER
 --------------------------------------------------------------------------------
