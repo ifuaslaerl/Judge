@@ -25,8 +25,11 @@ func HandleSubmission(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Parse Problem ID from URL
-	parts := strings.Split(r.URL.Path, "/")
+	// --- FIX #1: URL Parsing Fragility ---
+	// Trim trailing slash to prevent empty string error on split
+	cleanPath := strings.TrimSuffix(r.URL.Path, "/")
+	parts := strings.Split(cleanPath, "/")
+	
 	if len(parts) == 0 {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
@@ -51,9 +54,12 @@ func HandleSubmission(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 4. Process File Upload (Limit 1MB)
-	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
-	if err := r.ParseMultipartForm(1024 * 1024); err != nil {
+	// --- FIX #2: Upload Limit Miscalculation ---
+	// Allow 1MB for file + 4KB overhead for Multipart headers/boundaries
+	const maxUploadSize = (1024 * 1024) + 4096 
+	
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
 		http.Error(w, "File too large (Max 1MB)", http.StatusBadRequest)
 		return
 	}
@@ -66,7 +72,6 @@ func HandleSubmission(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	// 5. Insert PENDING record into DB *FIRST*
-	// We insert an empty file_path first, then update it after we know the ID.
 	res, err := DB.Exec(`INSERT INTO submissions (user_id, problem_id, status, file_path) VALUES (?, ?, 'PENDING', '')`, userID, problemID)
 	if err != nil {
 		log.Printf("DB Insert Failed: %v", err)
@@ -104,8 +109,18 @@ func HandleSubmission(w http.ResponseWriter, r *http.Request) {
 	}
 	dst.Close()
 
-	// Update record with actual file path
-	DB.Exec("UPDATE submissions SET file_path = ? WHERE id = ?", filePath, submissionID)
+	// --- FIX #3: Ignored Database Update Error ---
+	// Check error on update. If DB lock fails here, we must rollback everything.
+	if _, err := DB.Exec("UPDATE submissions SET file_path = ? WHERE id = ?", filePath, submissionID); err != nil {
+		log.Printf("CRITICAL: Failed to link file path. Rolling back submission %d. Error: %v", submissionID, err)
+		
+		// Rollback: Delete file AND DB record
+		os.Remove(filePath)
+		DB.Exec("DELETE FROM submissions WHERE id = ?", submissionID)
+		
+		http.Error(w, "System error during finalization", http.StatusInternalServerError)
+		return
+	}
 
 	// 7. Push to Buffered Channel
 	select {
