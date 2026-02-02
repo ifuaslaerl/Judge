@@ -1,0 +1,34 @@
+================================================================================
+ADMIN GUIDE: ADDING PROBLEMS
+================================================================================
+
+Since there is no Admin Web UI, problems are added via Database & Filesystem.
+
+STEP 1: PREPARE FILES
+--------------------------------------------------------------------------------
+1. PDF Statement: Rename to `{letter}.pdf` (e.g., A.pdf).
+2. Test Cases: (Not currently supported by automated judge, assuming manual/custom).
+
+STEP 2: DATABASE INSERTION
+--------------------------------------------------------------------------------
+Open the database:
+$ sqlite3 storage/db/judge.sqlite
+
+Run the insert command for each problem:
+INSERT INTO problems (letter_code, time_limit, pdf_path) 
+VALUES ('A', 1000, 'storage/problems/A.pdf');
+
+INSERT INTO problems (letter_code, time_limit, pdf_path) 
+VALUES ('B', 2000, 'storage/problems/B.pdf');
+
+STEP 3: FILE PLACEMENT
+--------------------------------------------------------------------------------
+1. Create directory: `mkdir -p storage/problems`
+2. Move your PDF files into `storage/problems/`.
+   - Ensure the filenames match exactly what you inserted into the DB.
+
+STEP 4: VERIFICATION
+--------------------------------------------------------------------------------
+Start the server and visit `/dashboard`.
+- Check if "A" and "B" appear.
+- Click [PDF] to verify the file loads.

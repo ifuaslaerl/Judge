@@ -16,7 +16,7 @@ PHASE 1: SCAFFOLDING & INFRASTRUCTURE
    - [x] Create persistent storage: `mkdir -p storage/db storage/submissions` .
    - [x] Create certificate store: `mkdir certs` .
 
-3. Security Basics (Internal HTTPS)
+3. Security Basics 
    - [x] Generate self-signed TLS certificates (`server.crt`, `server.key`) for local port :8443 .
    - [x] Configure Go HTTP server to listen on :8443 using these certs.
 
@@ -32,7 +32,7 @@ PHASE 2: DATABASE & DATA MODEL
    - [x] Create Table `Problems`: `id, letter_code, time_limit, pdf_path` .
    - [x] Create Table `Submissions`: `id, user_id, problem_id, status, file_path, created_at` .
 
-PHASE 3: AUTHENTICATION (PLATFORM LEVEL)
+PHASE 3: AUTHENTICATION 
 --------------------------------------------------------------------------------
 Note: External auth is handled by Cloudflare Zero Trust .
 This phase implements the internal application login.
@@ -45,7 +45,7 @@ This phase implements the internal application login.
    - [x] Create Auth Middleware to check session tokens against the DB.
    - [x] Implement submission cap check (Max 100 submissions per user) .
 
-PHASE 4: THE SUBMISSION PIPELINE (CORE)
+PHASE 4: THE SUBMISSION PIPELINE 
 --------------------------------------------------------------------------------
 1. Buffered Queue
    - [x] Initialize a Go Buffered Channel with capacity **5000** .
@@ -70,7 +70,7 @@ PHASE 5: THE JUDGE WORKER
 
 PHASE 6: OPERATIONAL SAFETY & MAINTENANCE
 --------------------------------------------------------------------------------
-1. "The Reaper" (Startup Routine)
+1. "The Reaper" 
    - [x] Implement a boot scanner for `./storage/submissions/`.
    - [x] Logic: Delete any file on disk that does not have a corresponding ID in the DB .
 
@@ -88,4 +88,88 @@ PHASE 7: FRONTEND & DEPLOYMENT
 
 2. Cloudflare Integration
    - [x] Configure Cloudflare Tunnel to point to `https://localhost:8443` .
-   - [ ] Verify End-to-End Encryption (Client -> CF -> Server) .
+   - [x] Verify End-to-End Encryption (Client -> CF -> Server) .
+
+PHASE 8: FEATURE EXPANSION & POLISH
+--------------------------------------------------------------------------------
+1. Identity & UI Updates
+   - [ ] **Database Migration:** Add `display_name` column to `users` table.
+   - [ ] **UI Refresh:** Rename "Dashboard" tab to "Judge".
+   - [ ] **Problem Viewer:** Update template to use `<embed>` tag for PDFs.
+   - [ ] **Manual Book:** Create route `/problems/all` to serve `storage/all_problems.pdf`.
+
+2. Multi-Language Support
+   - [ ] **Worker Logic:** Update `processSubmission` to detect `.py` file extension.
+   - [ ] **Interpreter Path:** Implement `python3` execution logic in `isolate` wrapper.
+   - [ ] **Time Logic:** Apply 2x multiplier to time limit if language is Python.
+
+3. Admin CLI Tools
+   - [ ] **User Generator:** Implement `go run . --add-user` (Random 6-char auth gen).
+   - [ ] **Documentation:** Create `HOWTO_ADD_PROBLEMS.txt`.
+
+4. Standings System 
+   - [ ] **Backend:** Create `Standings` struct (User, SolvedCount, Penalty).
+   - [ ] **Caching:** Implement 30s In-Memory cache (Mutex + Timestamp).
+   - [ ] **Frontend:** Create `standings.html` template.
+
+5. Test Data Engine 
+   - [ ] **Filesystem:** Create structure `storage/problems/[id]/tests/` and `source/`.
+   - [ ] **CLI Tool:** Implement `go run . --bake [id] [seed] [count]`.
+     - [ ] Step 1: Exec `python3 generator.py [seed+i]` to create `.in` files.
+     - [ ] Step 2: Compile `solution.cpp`.
+     - [ ] Step 3: Run solution against `.in` files to create `.out` files.
+   - [ ] **Worker Update:** Refactor execution loop to iterate over baked files.
+   - [ ] **Comparator:** Implement Token-Based Diff (Scanner based).
+
+PHASE 9: ESSENTIAL CORRECTIONS
+--------------------------------------------------------------------------------
+1. Dynamic Resource Limits
+   - [ ] **Worker:** Update `processSubmission` to accept `timeLimit` int.
+   - [ ] **Sandbox:** Pass `--time=[limit]` flag to `isolate`.
+
+2. Compiler Logs
+   - [ ] **Schema:** Add `compiler_log` TEXT column to `submissions` table.
+   - [ ] **Worker:** Capture `CombinedOutput` from `g++` and UPDATE DB on error.
+   - [ ] **Frontend:** Add "Show Error" modal/link in `status.html`.
+
+3. Contest Control
+   - [ ] **Config:** Add global variables `StartTime` and `EndTime`.
+   - [ ] **Middleware:** Add time checks to `HandleSubmission` and `HandlePDF`.
+
+PHASE 10: CONTEST OPERATIONS
+--------------------------------------------------------------------------------
+1. Clarifications (MVP)
+   - [ ] **DB:** Create table `clarifications`.
+   - [ ] **UI:** Add "Ask Question" form to `dashboard.html`.
+   - [ ] **View:** Add "Announcements/Clarifications" box to the top of Dashboard.
+
+2. Discard Utility
+   - [ ] **CLI:** Implement flag `--discard [id]`.
+   - [ ] **Schema:** Add `is_active` boolean col to `problems` (or just use DELETE logic).
+   - [ ] **Purge:** Execute `DELETE FROM submissions WHERE problem_id = ?`.
+
+PHASE 11: STABILITY & FEEDBACK
+--------------------------------------------------------------------------------
+1. Code Viewer
+   - [ ] **Handler:** `HandleViewSource` (GET /submissions/[id]/source).
+   - [ ] **Security:** Verify `session.UserID == submission.UserID`.
+   - [ ] **UI:** Update `status.html` to link the ID column to the source view page.
+
+2. Detailed Verdicts
+   - [ ] **Worker:** Update loop to track test index `i`.
+   - [ ] **DB:** Ensure `status` column is long enough (TEXT) to hold strings like "WA on test 100".
+   - [ ] **Reporting:** On failure, format string: `fmt.Sprintf("%s on test %d", verdict, i)`.
+
+PHASE 12: ADVANCED MECHANICS
+--------------------------------------------------------------------------------
+1. Custom Checkers
+   - [ ] **Baker:** Compile `checker.cpp` if it exists in the problem folder.
+   - [ ] **Worker:** Branch logic:
+     - If `checker` binary exists: Run `./checker [in] [user_out] [expected_out]`.
+     - Else: Run standard Token Diff.
+   - [ ] **Protocol:** Support standard `testlib.h` return codes.
+
+2. Scoreboard Freeze
+   - [ ] **Config:** Add `FreezeTime` global variable.
+   - [ ] **Query:** Update Standings SQL/Cache logic to ignore submissions after `FreezeTime`.
+   - [ ] **UI:** Add a visual indicator ("SCOREBOARD FROZEN") to the frontend.

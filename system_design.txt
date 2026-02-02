@@ -121,3 +121,147 @@ D. Connectivity & Security
      2. Verify deletion.
      3. Wipe DB (clearing hashes/submissions/sessions).
    - *Reasoning:* Prevents DB records from pointing to non-existent files.
+
+7. POST-MVP ARCHITECTURE EXPANSION
+--------------------------------------------------------------------------------
+A. Identity Model Update
+   - **Problem:** Users need to change their team name on the scoreboard without breaking their login credentials.
+   - **Solution:** Decouple Authentication from Display.
+     - `username`: Immutable, used for Login only.
+     - `display_name`: Mutable, used for Scoreboard/Standings. Default = `username`.
+
+B. Polyglot Execution Strategy (Python Support)
+   - **Constraint:** Python is interpreted and generally slower than C++.
+   - **Execution Path:**
+     - *C++:* Compile (`g++`) -> Run Binary.
+     - *Python:* No Compile -> Run Interpreter (`python3`) inside Sandbox.
+
+C. Scoreboard Architecture (High Load Protection)
+   - **Risk:** Calculating standings (summing penalties/ACs) requires expensive aggregations.
+   - **Strategy:** "Read-Through Cache".
+     - The Standings Struct is calculated and stored in **RAM**.
+     - Cache Time-to-Live (TTL): 30 seconds.
+     - Requests hit RAM; DB is only queried if Cache is expired.
+
+D. Static Asset Management
+   - **Problem Book:** Instead of dynamic PDF merging, the system serves a static file `all_problems.pdf` manually uploaded by the Admin.
+   - **PDF Viewing:** Files are embedded (`<embed>`) directly in the UI to maintain user focus.
+
+E. Test Data & Verification Pipeline (Deterministic)
+   - **Concept:** "Baking" instead of dynamic generation.
+   - **Components:**
+     1. `generator.py`: Accepts an integer argument [SEED]. Prints Input to stdout.
+     2. `solution.cpp`: The trusted reference solution. Prints Output to stdout.
+   - **The Baking Process (Admin CLI):**
+     - Admin provides a **Base Seed**.
+     - System loops N times:
+       1. Run `generator.py [base_seed + i]` -> Save to `[i].in`.
+       2. Run compiled `solution.cpp < [i].in` -> Save to `[i].out`.
+   - **Verification:**
+     - Worker does NOT run the generator.
+     - Worker runs User Code against the pre-baked `.in` files.
+     - Output is compared to `.out` using a "Token Diff" (ignoring whitespace).
+
+8. ESSENTIAL CORRECTIONS 
+--------------------------------------------------------------------------------
+1. Dynamic Limits
+   - **Problem:** Worker uses hardcoded 2.0s limit for all problems.
+   - **Correction:** Worker must query `problems.time_limit` and pass it to the Sandbox.
+
+2. Compiler Feedback
+   - **Problem:** Users receive "CE" verdict but cannot see the error message.
+   - **Correction:** - DB: Add `compiler_log` column to `submissions`.
+     - Worker: Capture `stderr` from `g++` and save it to DB.
+     - UI: Display the log on the Status page if Verdict == CE.
+
+3. Contest Lifecycle
+   - **Problem:** Infinite contest time.
+   - **Correction:**
+     - Enforce `start_time` (Block PDF access before start).
+     - Enforce `end_time` (Block submissions after end).
+
+9. CODE STANDARDS & PROJECT STRUCTURE
+--------------------------------------------------------------------------------
+A. Canonical Directory Tree
+   .
+   ├── *.go                 # Core Application Logic (Flat Structure)
+   ├── go.mod / go.sum      # Dependencies
+   ├── certs/               # TLS Certificates (server.crt, server.key)
+   ├── templates/           # HTML Frontend Templates
+   └── storage/             # MUTABLE RUNTIME DATA (Git Ignored)
+       ├── db/              # SQLite Database File (WAL mode)
+       ├── submissions/     # User C++ uploads & binaries (Cleaned by Reaper)
+       └── problems/        # Problem Data Packages
+           └── [id]/
+               ├── [id].pdf     # Problem Statement
+               ├── solution.cpp # Reference Solution (Trusted)
+               ├── generator.py # Test Case Generator
+               └── tests/       # "Baked" Input/Output files (.in / .out)
+
+B. File Naming Conventions
+   - **Entry Point:** `main.go` (CLI parsing, Server setup).
+   - **Core Modules:** Name by responsibility (e.g., `worker.go`, `database.go`, `auth.go`).
+   - **Handlers:** `handler_[feature].go` (if `frontend.go` becomes too large).
+   - **HTML Templates:** lowercase, simple names (`dashboard.html`, `login.html`).
+
+C. Coding Guidelines (Go)
+   1. **Dependencies:** Keep the project lightweight. Avoid heavy frameworks (Gin/Echo) in favor of `net/http`.
+   2. **Error Handling:** - Log all internal errors with a prefix: `log.Printf("DB ERROR: %v", err)`.
+      - Return generic HTTP 500 to the user to avoid leaking internals.
+   3. **Concurrency:** - Use **Channels** for async tasks (Submission Queue).
+      - Use **Mutexes** for any In-Memory caches (e.g., Standings).
+   4. **Database:** - Always use **Prepared Statements** (`?`) to prevent SQL Injection.
+      - Never interpolate strings into SQL queries.
+   5. **Logging:** - Format: `[COMPONENT] Message`. Example: `[WORKER] Processing sub 10`.
+
+D. Maintenance Policy
+   - **The "No-Panic" Rule:** The server should never crash during a request. Recover from panics in Middleware if necessary.
+   - **The "Clean-Boot" Rule:** The system must be able to restart at any time without data corruption (relies on SQLite WAL & Reaper).
+
+10. OPERATIONAL SAFEGUARDS
+--------------------------------------------------------------------------------
+A. Clarification System
+   - **Purpose:** Handling ambiguity in problem statements during the contest.
+   - **Data Model:** Table `clarifications` (id, user_id, problem_id, question, answer, is_public).
+   - **Flow:** 1. User POSTs question.
+     2. Admin (via CLI or future UI) updates `answer`.
+     3. If `is_public=true`, the Q&A appears on EVERY user's dashboard.
+
+B. The "Broken Problem" Protocol (Discard Policy)
+   - **Scenario:** A problem is found to have invalid test data or fatal errors mid-contest.
+   - **Policy:** **No Rejudging.** The problem is immediately neutralized to preserve fairness.
+   - **Command:** `go run . --discard [problem_id]`
+   - **Logic:**
+     1. **Hide:** Problem is removed from the Dashboard (Active=False).
+     2. **Dump:** All submissions (including ACs) for this ID are DELETE'd from the database.
+     3. **Result:** The problem effectively ceases to exist for the scoreboard.
+
+11. UX & STABILITY POLICIES
+--------------------------------------------------------------------------------
+A. Code History Access
+   - **Philosophy:** The server acts as a backup for the user.
+   - **Feature:** Read-Only endpoint `GET /submissions/[id]/source`.
+   - **Security:** Strict ownership check (User can only view their own code).
+
+B. Granular Verdict Reporting (Codeforces Style)
+   - **Goal:** Provide actionable feedback regarding *where* the code failed.
+   - **Format:** Status string includes the index of the first failure.
+     - Examples: `WA on test 1` [Sample], `TLE on test 25` [Edge Case].
+   - **Logic:** Worker loop tracks the iterator index `i` and updates the DB with the specific failure point.
+
+12. ADVANCED JUDGING & CONTEST DYNAMICS
+--------------------------------------------------------------------------------
+A. Special Judge (Custom Checkers)
+   - **Constraint:** "Diff" is insufficient for problems with multiple solutions or floating-point requirements.
+   - **Mechanism:**
+     - Check for `checker.cpp` in `storage/problems/[id]/`.
+     - If exists: Compile `checker`.
+     - Execution: `checker [input_file] [user_output] [expected_output]`.
+     - Verdict: Checker exit code determines AC (0) or WA (1).
+
+B. Scoreboard Freeze
+   - **Purpose:** Maintain suspense during the final phase of the contest.
+   - **Logic:**
+     - Config: `freeze_time` (timestamp).
+     - Public View: Filter submissions where `created_at < freeze_time`.
+     - Admin View (CLI): Access to full data to verify winners.
