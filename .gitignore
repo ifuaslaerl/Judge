@@ -3,6 +3,7 @@ storage/db/*.sqlite
 storage/db/*.db
 storage/db/*.db-wal
 storage/db/*.db-shm
+storage/db/*
 
 # We keep the folder structure (.keep), but ignore the files
 storage/submissions/*
@@ -19,3 +20,10 @@ certs/*.crt
 *.test
 vendor/
 go.sum
+
+# --- Binarys ---
+Judge
+
+# --- Temporary Files ---
+seed.go
+seed.go.bak

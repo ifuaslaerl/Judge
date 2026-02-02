@@ -38,15 +38,14 @@ func main() {
 	// Protected (Apply Middleware)
 	http.HandleFunc("/dashboard", AuthMiddleware(HandleDashboard))
 	http.HandleFunc("/status", AuthMiddleware(HandleStatus))
-	http.HandleFunc("/submit/", AuthMiddleware(HandleSubmission))
+	http.HandleFunc("/submit/", AuthMiddleware(HandleSubmission)) //
 
 	// Root Redirect
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 	    http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 	})
 	
-	// Protected Routes
-	http.HandleFunc("/submit/", AuthMiddleware(HandleSubmission))
+	// REMOVED DUPLICATE REGISTRATION HERE
 
 	// Port 8443
 	port := ":8443"
