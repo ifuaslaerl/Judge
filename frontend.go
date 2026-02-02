@@ -5,7 +5,9 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -146,4 +148,37 @@ func HandleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	renderTemplate(w, "status.html", subs)
+}
+
+// GET /problems/[id]/pdf
+func HandlePDF(w http.ResponseWriter, r *http.Request) {
+	// 1. Parse ID from URL
+	// Path format: /problems/[id]/pdf
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 3 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	// The ID should be the second to last part (index 2 in /problems/1/pdf)
+	// We might need to adjust based on strict parsing, but let's assume standard routing
+	idStr := parts[2]
+
+	// 2. Query DB for file path
+	var pdfPath string
+	err := DB.QueryRow("SELECT pdf_path FROM problems WHERE id = ?", idStr).Scan(&pdfPath)
+	if err != nil {
+		http.Error(w, "Problem or PDF not found", http.StatusNotFound)
+		return
+	}
+
+	// 3. Serve the file
+	// Verify file exists on disk first
+	if _, err := os.Stat(pdfPath); os.IsNotExist(err) {
+		http.Error(w, "PDF file missing from storage", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	http.ServeFile(w, r, pdfPath)
 }

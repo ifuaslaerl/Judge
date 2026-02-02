@@ -83,9 +83,9 @@ PHASE 6: OPERATIONAL SAFETY & MAINTENANCE
 PHASE 7: FRONTEND & DEPLOYMENT
 --------------------------------------------------------------------------------
 1. User Interface
-   - [ ] Dashboard: List problems and PDF links (`GET /problems/[id]/pdf`) .
-   - [ ] Status Page: Poll `Submissions` table for "Live Status" .
+   - [x] Dashboard: List problems and PDF links (`GET /problems/[id]/pdf`) .
+   - [x] Status Page: Poll `Submissions` table for "Live Status" .
 
 2. Cloudflare Integration
-   - [ ] Configure Cloudflare Tunnel to point to `https://localhost:8443` .
+   - [x] Configure Cloudflare Tunnel to point to `https://localhost:8443` .
    - [ ] Verify End-to-End Encryption (Client -> CF -> Server) .

@@ -45,7 +45,8 @@ func main() {
 	// Protected (Apply Middleware)
 	http.HandleFunc("/dashboard", AuthMiddleware(HandleDashboard))
 	http.HandleFunc("/status", AuthMiddleware(HandleStatus))
-	http.HandleFunc("/submit/", AuthMiddleware(HandleSubmission)) //
+	http.HandleFunc("/submit/", AuthMiddleware(HandleSubmission)) 
+	http.HandleFunc("/problems/", AuthMiddleware(HandlePDF))
 
 	// Root Redirect
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
