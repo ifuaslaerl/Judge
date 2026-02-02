@@ -15,12 +15,19 @@ func main() {
 
 	// 2. Parse CLI Flags
 	flushCmd := flag.Bool("flush-sessions", false, "Truncate the Sessions table and exit")
+	wipeCmd := flag.Bool("wipe-all", false, "DANGER: Delete all submissions, users, and sessions") // <--- NEW	
 	flag.Parse()
 
 	// 3. Execute CLI Command if requested
 	if *flushCmd {
 		log.Println("EXECUTING: Flushing all active sessions...")
 		FlushSessions()
+		os.Exit(0)
+	}
+
+	if *wipeCmd {
+		log.Println("EXECUTING: Weekly Wipe (Factory Reset)...")
+		WipeAll()
 		os.Exit(0)
 	}
 

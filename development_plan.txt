@@ -78,7 +78,7 @@ PHASE 6: OPERATIONAL SAFETY & MAINTENANCE
    - [x] Verify that RAM Queue is non-persistent (Accept data loss on crash) .
 
 3. Maintenance Scripts
-   - [ ] Implement "Weekly Wipe" logic: Delete all files -> Wipe DB .
+   - [x] Implement "Weekly Wipe" logic: Delete all files -> Wipe DB .
 
 PHASE 7: FRONTEND & DEPLOYMENT
 --------------------------------------------------------------------------------
