@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"database/sql"
@@ -11,6 +11,9 @@ import (
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+	"github.com/ifuaslaerl/Judge/internal/auth"
+        "github.com/ifuaslaerl/Judge/internal/data"
+	"github.com/ifuaslaerl/Judge/internal/middleware"
 )
 
 // --- Templates ---
@@ -48,7 +51,7 @@ func processLogin(w http.ResponseWriter, r *http.Request) {
 	var hash string
 
 	// 1. Check User
-	err := DB.QueryRow("SELECT id, password_hash FROM users WHERE username = ?", username).Scan(&id, &hash)
+	err := data.DB.QueryRow("SELECT id, password_hash FROM users WHERE username = ?", username).Scan(&id, &hash)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Invalid Credentials", http.StatusUnauthorized)
 		return
@@ -64,7 +67,7 @@ func processLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Create Session
-	token, err := CreateSession(id)
+	token, err := auth.CreateSession(id)
 	if err != nil {
 		http.Error(w, "Session Creation Failed", http.StatusInternalServerError)
 		return
@@ -86,7 +89,7 @@ func processLogin(w http.ResponseWriter, r *http.Request) {
 // GET /dashboard
 func HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	// Fetch Problems
-	rows, err := DB.Query("SELECT id, letter_code, time_limit, pdf_path FROM problems ORDER BY letter_code")
+	rows, err := data.DB.Query("SELECT id, letter_code, time_limit, pdf_path FROM problems ORDER BY letter_code")
 	if err != nil {
 		http.Error(w, "DB Error", http.StatusInternalServerError)
 		return
@@ -114,10 +117,10 @@ func HandleDashboard(w http.ResponseWriter, r *http.Request) {
 
 // GET /status
 func HandleStatus(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(UserIDKey).(int)
+	userID := r.Context().Value(middleware.UserIDKey).(int)
 
 	// Fetch recent submissions for this user
-	rows, err := DB.Query(`
+	rows, err := data.DB.Query(`
 		SELECT s.id, p.letter_code, s.status, s.created_at 
 		FROM submissions s 
 		JOIN problems p ON s.problem_id = p.id 
@@ -167,7 +170,7 @@ func HandlePDF(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Query DB for file path
 	var pdfPath string
-	err := DB.QueryRow("SELECT pdf_path FROM problems WHERE id = ?", idStr).Scan(&pdfPath)
+	err := data.DB.QueryRow("SELECT pdf_path FROM problems WHERE id = ?", idStr).Scan(&pdfPath)
 	if err != nil {
 		http.Error(w, "Problem or PDF not found", http.StatusNotFound)
 		return

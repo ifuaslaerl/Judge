@@ -1,9 +1,10 @@
-package main
+package auth
 
 import (
 	"crypto/rand"
 	"encoding/hex"
 	"log"
+	"github.com/ifuaslaerl/Judge/internal/data"
 )
 
 // GenerateSecureToken creates a random 32-byte hex string
@@ -22,7 +23,7 @@ func CreateSession(userID int) (string, error) {
 	// Insert into sessions table
 	// We use OR REPLACE or simple INSERT. Since token is PK, collision is virtually impossible.
 	query := `INSERT INTO sessions (token, user_id) VALUES (?, ?)`
-	_, err := DB.Exec(query, token, userID)
+	_, err := data.DB.Exec(query, token, userID)
 	if err != nil {
 		return "", err
 	}
@@ -34,7 +35,7 @@ func GetUserFromSession(token string) (int, bool) {
 	var userID int
 	query := `SELECT user_id FROM sessions WHERE token = ?`
 	
-	err := DB.QueryRow(query, token).Scan(&userID)
+	err := data.DB.QueryRow(query, token).Scan(&userID)
 	if err != nil {
 		return 0, false // Token not found or error
 	}
@@ -44,7 +45,7 @@ func GetUserFromSession(token string) (int, bool) {
 // FlushSessions deletes all active session tokens (Admin CLI)
 func FlushSessions() {
 	query := `DELETE FROM sessions`
-	_, err := DB.Exec(query)
+	_, err := data.DB.Exec(query)
 	if err != nil {
 		log.Fatalf("Failed to flush sessions: %v", err)
 	}

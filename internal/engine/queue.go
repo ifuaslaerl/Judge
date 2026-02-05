@@ -1,4 +1,4 @@
-package main
+package engine
 
 // SubmissionQueue is the buffered channel for processing submissions
 // Capacity 5000: Covers Max Users (50) * Max Submissions (100) = 100% Guaranteed Non-Blocking

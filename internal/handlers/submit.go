@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"fmt"
@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"github.com/ifuaslaerl/Judge/internal/data"
+	"github.com/ifuaslaerl/Judge/internal/engine"
+	"github.com/ifuaslaerl/Judge/internal/middleware"
 )
 
 // HandleSubmission processes the upload: POST /submit/[problem_id]
@@ -19,7 +22,7 @@ func HandleSubmission(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 1. Get UserID from Context (set by Middleware)
-	userID, ok := r.Context().Value(UserIDKey).(int)
+	userID, ok := r.Context().Value(middleware.UserIDKey).(int)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -43,7 +46,7 @@ func HandleSubmission(w http.ResponseWriter, r *http.Request) {
 
 	// 3. Enforce Submission Cap (Max 100 per user)
 	var count int
-	err = DB.QueryRow("SELECT COUNT(*) FROM submissions WHERE user_id = ?", userID).Scan(&count)
+	err = data.DB.QueryRow("SELECT COUNT(*) FROM submissions WHERE user_id = ?", userID).Scan(&count)
 	if err != nil {
 		log.Printf("DB Error: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -72,7 +75,7 @@ func HandleSubmission(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	// 5. Insert PENDING record into DB *FIRST*
-	res, err := DB.Exec(`INSERT INTO submissions (user_id, problem_id, status, file_path) VALUES (?, ?, 'PENDING', '')`, userID, problemID)
+	res, err := data.DB.Exec(`INSERT INTO submissions (user_id, problem_id, status, file_path) VALUES (?, ?, 'PENDING', '')`, userID, problemID)
 	if err != nil {
 		log.Printf("DB Insert Failed: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
@@ -93,7 +96,7 @@ func HandleSubmission(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// ROLLBACK: Delete DB record if file creation fails
 		log.Printf("Disk Write Error: %v. Rolling back submission %d", err, submissionID)
-		DB.Exec("DELETE FROM submissions WHERE id = ?", submissionID)
+		data.DB.Exec("DELETE FROM submissions WHERE id = ?", submissionID)
 		http.Error(w, "Storage failure", http.StatusInternalServerError)
 		return
 	}
@@ -103,7 +106,7 @@ func HandleSubmission(w http.ResponseWriter, r *http.Request) {
 		// ROLLBACK: Delete DB record and partial file
 		log.Printf("File Copy Error: %v. Rolling back submission %d", err, submissionID)
 		os.Remove(filePath)
-		DB.Exec("DELETE FROM submissions WHERE id = ?", submissionID)
+		data.DB.Exec("DELETE FROM submissions WHERE id = ?", submissionID)
 		http.Error(w, "Storage failure", http.StatusInternalServerError)
 		return
 	}
@@ -111,12 +114,12 @@ func HandleSubmission(w http.ResponseWriter, r *http.Request) {
 
 	// --- FIX #3: Ignored Database Update Error ---
 	// Check error on update. If DB lock fails here, we must rollback everything.
-	if _, err := DB.Exec("UPDATE submissions SET file_path = ? WHERE id = ?", filePath, submissionID); err != nil {
+	if _, err := data.DB.Exec("UPDATE submissions SET file_path = ? WHERE id = ?", filePath, submissionID); err != nil {
 		log.Printf("CRITICAL: Failed to link file path. Rolling back submission %d. Error: %v", submissionID, err)
 		
 		// Rollback: Delete file AND DB record
 		os.Remove(filePath)
-		DB.Exec("DELETE FROM submissions WHERE id = ?", submissionID)
+		data.DB.Exec("DELETE FROM submissions WHERE id = ?", submissionID)
 		
 		http.Error(w, "System error during finalization", http.StatusInternalServerError)
 		return
@@ -124,7 +127,7 @@ func HandleSubmission(w http.ResponseWriter, r *http.Request) {
 
 	// 7. Push to Buffered Channel
 	select {
-	case SubmissionQueue <- int(submissionID):
+	case engine.SubmissionQueue <- int(submissionID):
 		// Success
 	default:
 		// Should theoretically not happen due to capacity=5000

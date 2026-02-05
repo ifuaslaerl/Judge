@@ -1,9 +1,10 @@
-package main
+package tasks
 
 import (
 	"log"
 	"os"
 	"path/filepath"
+	"github.com/ifuaslaerl/Judge/internal/data"
 )
 
 // WipeAll implements the "Weekly Wipe" maintenance logic
@@ -47,7 +48,7 @@ func WipeAll() {
 	}
 
 	for _, q := range queries {
-		if _, err := DB.Exec(q); err != nil {
+		if _, err := data.DB.Exec(q); err != nil {
 			log.Fatalf("DB WIPE ERROR executing '%s': %v", q, err)
 		}
 	}

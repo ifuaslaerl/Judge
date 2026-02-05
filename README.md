@@ -54,7 +54,7 @@ go mod tidy
 Start the application. On the first run, it will automatically initialize the SQLite database.
 
 ```bash
-go run .
+go run cmd/server/main.go
 ```
 
 * **Local Access:** `https://localhost:8443` (You will see a browser warning due to the self-signed cert).
@@ -79,13 +79,13 @@ The application includes built-in CLI commands for managing the contest.
 ### Flush Sessions
 Logs out all users by clearing the session table. Useful if tokens are compromised.
 ```bash
-go run . --flush-sessions
+go run cmd/server/main.go --flush-sessions
 ```
 
 ### Factory Reset (Weekly Wipe)
 **DANGER:** This deletes ALL submissions, users, and session data. It effectively resets the platform for a new contest.
 ```bash
-go run . --wipe-all
+go run cmd/server/main.go --wipe-all
 ```
 
 ### Orphaned File Cleanup (The Reaper)

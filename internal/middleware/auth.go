@@ -1,8 +1,9 @@
-package main
+package middleware
 
 import (
 	"context"
 	"net/http"
+	"github.com/ifuaslaerl/Judge/internal/auth"
 )
 
 // Context key to avoid collisions
@@ -21,7 +22,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// 2. Validate token against DB
-		userID, ok := GetUserFromSession(cookie.Value)
+		userID, ok := auth.GetUserFromSession(cookie.Value)
 		if !ok {
 			// Invalid/Expired token: Clear cookie and redirect
 			http.SetCookie(w, &http.Cookie{Name: "session_token", MaxAge: -1})

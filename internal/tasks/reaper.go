@@ -1,4 +1,4 @@
-package main
+package tasks
 
 import (
 	"log"
@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"github.com/ifuaslaerl/Judge/internal/data"
 )
 
 // StartReaper cleans up orphaned files in storage/submissions
@@ -37,7 +38,7 @@ func StartReaper() {
 
 		// Check if ID exists in DB
 		var exists bool
-		err = DB.QueryRow("SELECT EXISTS(SELECT 1 FROM submissions WHERE id = ?)", id).Scan(&exists)
+		err = data.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM submissions WHERE id = ?)", id).Scan(&exists)
 		if err != nil {
 			log.Printf("REAPER DB ERROR: %v", err)
 			continue

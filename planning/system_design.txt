@@ -182,41 +182,59 @@ E. Test Data & Verification Pipeline (Deterministic)
 
 9. CODE STANDARDS & PROJECT STRUCTURE
 --------------------------------------------------------------------------------
-A. Canonical Directory Tree
-   .
-   ├── *.go                 # Core Application Logic (Flat Structure)
-   ├── go.mod / go.sum      # Dependencies
-   ├── certs/               # TLS Certificates (server.crt, server.key)
-   ├── templates/           # HTML Frontend Templates
-   └── storage/             # MUTABLE RUNTIME DATA (Git Ignored)
-       ├── db/              # SQLite Database File (WAL mode)
-       ├── submissions/     # User C++ uploads & binaries (Cleaned by Reaper)
-       └── problems/        # Problem Data Packages
-           └── [id]/
-               ├── [id].pdf     # Problem Statement
-               ├── solution.cpp # Reference Solution (Trusted)
-               ├── generator.py # Test Case Generator
-               └── tests/       # "Baked" Input/Output files (.in / .out)
+A. Standard Go Layout (Modular & Scalable)
+   The project adopts the Standard Go Layout to ensure modularity, prevent 
+   circular dependencies, and clearly separate the application entry point 
+   from the private library code.
 
-B. File Naming Conventions
-   - **Entry Point:** `main.go` (CLI parsing, Server setup).
-   - **Core Modules:** Name by responsibility (e.g., `worker.go`, `database.go`, `auth.go`).
-   - **Handlers:** `handler_[feature].go` (if `frontend.go` becomes too large).
-   - **HTML Templates:** lowercase, simple names (`dashboard.html`, `login.html`).
+   Project Root/
+   ├── cmd/                     # MAIN APPLICATIONS
+   │   └── server/
+   │       └── main.go          # Entry Point: Parses CLI flags & starts HTTP server
+   │
+   ├── internal/                # PRIVATE APPLICATION CODE (Not importable externally)
+   │   ├── auth/                # Authentication logic (Session creation, Token generation)
+   │   ├── data/                # Data Layer (SQLite connection, Schema, Models, Queries)
+   │   ├── engine/              # Judging Core (Submission Queue, Worker, Sandbox, Comparator)
+   │   ├── handlers/            # HTTP Transport (Web endpoints, Upload processing, PDF serving)
+   │   ├── middleware/          # Request Processing (Auth checks, Context injection)
+   │   └── tasks/               # Background Routines (The Reaper, Weekly Wipe, maintenance)
+   │
+   ├── certs/                   # TLS Certificates (server.crt, server.key)
+   ├── templates/               # HTML Frontend Templates
+   ├── storage/                 # MUTABLE RUNTIME DATA (Git Ignored)
+   │   ├── db/                  # SQLite Database File (WAL mode)
+   │   ├── submissions/         # User uploads & compiled binaries
+   │   └── problems/            # Problem Data (PDFs, Source, Tests)
+   │
+   ├── go.mod / go.sum          # Dependencies
+   └── README.md                # Documentation
 
-C. Coding Guidelines (Go)
-   1. **Dependencies:** Keep the project lightweight. Avoid heavy frameworks (Gin/Echo) in favor of `net/http`.
-   2. **Error Handling:** - Log all internal errors with a prefix: `log.Printf("DB ERROR: %v", err)`.
-      - Return generic HTTP 500 to the user to avoid leaking internals.
-   3. **Concurrency:** - Use **Channels** for async tasks (Submission Queue).
-      - Use **Mutexes** for any In-Memory caches (e.g., Standings).
-   4. **Database:** - Always use **Prepared Statements** (`?`) to prevent SQL Injection.
-      - Never interpolate strings into SQL queries.
-   5. **Logging:** - Format: `[COMPONENT] Message`. Example: `[WORKER] Processing sub 10`.
+B. File Placement Guidelines (For Future Updates)
+   When adding new features, place files according to their technical responsibility:
 
-D. Maintenance Policy
-   - **The "No-Panic" Rule:** The server should never crash during a request. Recover from panics in Middleware if necessary.
-   - **The "Clean-Boot" Rule:** The system must be able to restart at any time without data corruption (relies on SQLite WAL & Reaper).
+   1. New Executables or CLI Tools:
+      - Place in `cmd/[tool_name]/main.go`.
+      - Example: If creating a separate "grader" binary, use `cmd/grader/main.go`.
+
+   2. Core Judging Logic (Phase 8/12):
+      - Logic related to running code, diffing outputs, or sandboxing belongs in `internal/engine/`.
+      - Example: `comparator.go` (Token Diff) and `python.go` (Interpreter support) go here.
+
+   3. Database Changes:
+      - All SQL statements and schema migrations must reside in `internal/data/`.
+      - Handlers should call methods from `internal/data` rather than writing raw SQL.
+
+   4. Background Tasks:
+      - Maintenance scripts or cron-like jobs belong in `internal/tasks/`.
+
+C. Coding Guidelines
+   1. **Dependencies:** Keep lightweight. Prefer `net/http` over heavy frameworks.
+   2. **Error Handling:** Log detailed errors internally; return generic HTTP 500 to users.
+   3. **Concurrency:** - Use **Channels** for the Submission Queue (Producer/Consumer).
+      - Use **Mutexes** for in-memory state (e.g., Scoreboard Cache).
+   4. **Database:** Always use Prepared Statements (`?`) to prevent SQL Injection.
+   5. **Imports:** Use the `internal/` package to strictly enforce boundary separation.
 
 10. OPERATIONAL SAFEGUARDS
 --------------------------------------------------------------------------------

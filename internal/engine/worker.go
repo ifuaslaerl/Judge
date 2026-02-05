@@ -1,4 +1,4 @@
-package main
+package engine
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"github.com/ifuaslaerl/Judge/internal/data"
 )
 
 // StartWorker consumes the SubmissionQueue and processes code
@@ -22,7 +23,7 @@ func StartWorker() {
 func processSubmission(id int) {
 	// 1. Fetch File Path from DB
 	var srcPath string
-	err := DB.QueryRow("SELECT file_path FROM submissions WHERE id = ?", id).Scan(&srcPath)
+	err := data.DB.QueryRow("SELECT file_path FROM submissions WHERE id = ?", id).Scan(&srcPath)
 	if err != nil {
 		log.Printf("WORKER ERROR [Sub %d]: Could not fetch file path: %v", id, err)
 		return
@@ -33,7 +34,7 @@ func processSubmission(id int) {
 	cmd := exec.Command("g++", "-O2", "-std=c++17", srcPath, "-o", binPath)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		log.Printf("WORKER [Sub %d]: Compilation Failed\n%s", id, out)
-		DB.Exec("UPDATE submissions SET status = 'CE' WHERE id = ?", id)
+		data.DB.Exec("UPDATE submissions SET status = 'CE' WHERE id = ?", id)
 		return
 	}
 
@@ -48,7 +49,7 @@ func processSubmission(id int) {
 
 	// 4. Update DB
 	log.Printf("WORKER [Sub %d]: Final Verdict -> %s", id, verdict)
-	DB.Exec("UPDATE submissions SET status = ? WHERE id = ?", verdict, id)
+	data.DB.Exec("UPDATE submissions SET status = ? WHERE id = ?", verdict, id)
 
 	// Cleanup binary
 	os.Remove(binPath)
