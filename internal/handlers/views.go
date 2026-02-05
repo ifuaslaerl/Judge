@@ -14,6 +14,7 @@ import (
 	"github.com/ifuaslaerl/Judge/internal/auth"
         "github.com/ifuaslaerl/Judge/internal/data"
 	"github.com/ifuaslaerl/Judge/internal/middleware"
+	"github.com/ifuaslaerl/Judge/internal/engine"
 )
 
 // --- Templates ---
@@ -225,4 +226,17 @@ func HandleProblemView(w http.ResponseWriter, r *http.Request) {
 
     // 3. Render Template
     renderTemplate(w, "problem.html", p)
+}
+
+// Add to internal/handlers/views.go
+
+// GET /standings
+func HandleStandings(w http.ResponseWriter, r *http.Request) {
+    board, err := engine.GetScoreboard()
+    if err != nil {
+        log.Printf("Scoreboard Error: %v", err)
+        http.Error(w, "Failed to calculate standings", http.StatusInternalServerError)
+        return
+    }
+    renderTemplate(w, "standings.html", board)
 }

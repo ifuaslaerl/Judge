@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Standings</title>
+    <meta http-equiv="refresh" content="30"> <style>
+        body { font-family: sans-serif; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        .solved { background-color: #dff0d8; color: #3c763d; font-weight: bold; }
+        .failed { background-color: #f2dede; color: #a94442; }
+        .pending { background-color: #fcf8e3; }
+        .rank-cell { font-weight: bold; }
+        .nav { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <h1>Contest Standings</h1>
+        <a href="/dashboard">Back to Judge</a> | <a href="/standings">Refresh</a>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 50px;">Rank</th>
+                <th style="text-align: left;">User</th>
+                <th style="width: 60px;">Solved</th>
+                <th style="width: 60px;">Penalty</th>
+                {{range .Problems}}
+                <th style="width: 50px;"><a href="/problems/view/{{.ID}}">{{.Letter}}</a></th>
+                {{end}}
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Rows}}
+            <tr>
+                <td class="rank-cell">{{.Rank}}</td>
+                <td style="text-align: left;">{{.DisplayName}}</td>
+                <td>{{.Solved}}</td>
+                <td>{{.Penalty}}</td>
+                
+                {{/* Iterate over the global problem list to access the cell map safely */}}
+                {{$cells := .Cells}}
+                {{range $.Problems}}
+                    {{$c := index $cells .Letter}}
+                    {{if $c.Solved}}
+                        <td class="solved">+{{if gt $c.Attempts 0}}{{$c.Attempts}}{{end}}</td>
+                    {{else if $c.IsPending}}
+                        <td class="pending">?</td>
+                    {{else if gt $c.Attempts 0}}
+                        <td class="failed">-{{$c.Attempts}}</td>
+                    {{else}}
+                        <td></td>
+                    {{end}}
+                {{end}}
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</body>
+</html>

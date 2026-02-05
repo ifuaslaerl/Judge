@@ -99,27 +99,27 @@ PHASE 8: FEATURE EXPANSION & POLISH
    - [x] **Manual Book:** Create route `/problems/all` to serve `storage/all_problems.pdf`.
 
 2. Multi-Language Support
-   - [ ] **Worker Logic:** Update `processSubmission` to detect `.py` file extension.
-   - [ ] **Interpreter Path:** Implement `python3` execution logic in `isolate` wrapper.
-   - [ ] **Time Logic:** Apply 2x multiplier to time limit if language is Python.
+   - [x] **Worker Logic:** Update `processSubmission` to detect `.py` file extension.
+   - [x] **Interpreter Path:** Implement `python3` execution logic in `isolate` wrapper.
+   - [x] **Time Logic:** Apply 2x multiplier to time limit if language is Python.
 
 3. Admin CLI Tools
-   - [ ] **User Generator:** Implement `go run . --add-user` (Random 6-char auth gen).
-   - [ ] **Documentation:** Create `HOWTO_ADD_PROBLEMS.txt`.
+   - [x] **User Generator:** Implement `go run . --add-user` (Random 6-char auth gen).
+   - [x] **Documentation:** Create `HOWTO_ADD_PROBLEMS.txt`.
 
 4. Standings System 
-   - [ ] **Backend:** Create `Standings` struct (User, SolvedCount, Penalty).
-   - [ ] **Caching:** Implement 30s In-Memory cache (Mutex + Timestamp).
-   - [ ] **Frontend:** Create `standings.html` template.
+   - [x] **Backend:** Create `Standings` struct (User, SolvedCount, Penalty).
+   - [x] **Caching:** Implement 30s In-Memory cache (Mutex + Timestamp).
+   - [x] **Frontend:** Create `standings.html` template.
 
 5. Test Data Engine 
-   - [ ] **Filesystem:** Create structure `storage/problems/[id]/tests/` and `source/`.
-   - [ ] **CLI Tool:** Implement `go run . --bake [id] [seed] [count]`.
-     - [ ] Step 1: Exec `python3 generator.py [seed+i]` to create `.in` files.
-     - [ ] Step 2: Compile `solution.cpp`.
-     - [ ] Step 3: Run solution against `.in` files to create `.out` files.
-   - [ ] **Worker Update:** Refactor execution loop to iterate over baked files.
-   - [ ] **Comparator:** Implement Token-Based Diff (Scanner based).
+   - [x] **Filesystem:** Create structure `storage/problems/[id]/tests/` and `source/`.
+   - [x] **CLI Tool:** Implement `go run . --bake [id] [seed] [count]`.
+     - [x] Step 1: Exec `python3 generator.py [seed+i]` to create `.in` files.
+     - [x] Step 2: Compile `solution.cpp`.
+     - [x] Step 3: Run solution against `.in` files to create `.out` files.
+   - [x] **Worker Update:** Refactor execution loop to iterate over baked files.
+   - [x] **Comparator:** Implement Token-Based Diff (Scanner based).
 
 PHASE 9: ESSENTIAL CORRECTIONS
 --------------------------------------------------------------------------------

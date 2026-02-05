@@ -1,0 +1,54 @@
+================================================================================
+HOW TO ADD PROBLEMS (MANUAL MODE)
+================================================================================
+
+Because this is a lightweight, self-hosted judge, there is no "Admin Panel" for 
+uploading problems. You must add them directly to the database and filesystem.
+
+PREREQUISITES
+--------------------------------------------------------------------------------
+1. Access to the server terminal.
+2. `sqlite3` installed.
+3. The problem statement in PDF format.
+
+STEP 1: PREPARE STORAGE
+--------------------------------------------------------------------------------
+Ensure the problems directory exists:
+$ mkdir -p storage/problems
+
+STEP 2: ADD PDF FILE
+--------------------------------------------------------------------------------
+1. Rename your PDF file to match the problem letter (recommended).
+   Example: `A.pdf`
+2. Move the file to the storage folder:
+   $ cp /path/to/A.pdf storage/problems/A.pdf
+
+STEP 3: REGISTER IN DATABASE
+--------------------------------------------------------------------------------
+Open the database:
+$ sqlite3 storage/db/judge.sqlite
+
+Execute the INSERT statement. 
+Note: Time limit is in milliseconds (1000 = 1.0s).
+
+sql> INSERT INTO problems (letter_code, time_limit, pdf_path) 
+     VALUES ('A', 1000, 'storage/problems/A.pdf');
+
+Repeat for other problems (B, C, etc.):
+
+sql> INSERT INTO problems (letter_code, time_limit, pdf_path) 
+     VALUES ('B', 2000, 'storage/problems/B.pdf');
+
+Type `.quit` to exit sqlite3.
+
+STEP 4: VERIFY
+--------------------------------------------------------------------------------
+1. Start the server: `go run cmd/server/main.go`
+2. Log in and check the Dashboard.
+3. Click [View Problem] to ensure the PDF loads correctly.
+
+TROUBLESHOOTING
+--------------------------------------------------------------------------------
+* If the PDF does not load: Check file permissions. The user running the Go 
+  server must have read access to `storage/problems/`.
+* If the problem doesn't appear: Check the database insert.
