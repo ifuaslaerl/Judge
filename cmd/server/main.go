@@ -46,11 +46,15 @@ func main() {
 	// Public
 	http.HandleFunc("/login", handlers.HandleLogin)
 
-	// Protected (Wrap Handlers with Middleware)
+	// Protected
 	http.HandleFunc("/dashboard", middleware.AuthMiddleware(handlers.HandleDashboard))
 	http.HandleFunc("/status", middleware.AuthMiddleware(handlers.HandleStatus))
 	http.HandleFunc("/submit/", middleware.AuthMiddleware(handlers.HandleSubmission))
 	http.HandleFunc("/problems/", middleware.AuthMiddleware(handlers.HandlePDF))
+	    
+	// Phase 8 Additions:
+	http.HandleFunc("/problems/all", middleware.AuthMiddleware(handlers.HandleManualBook)) 
+	http.HandleFunc("/problems/view/", middleware.AuthMiddleware(handlers.HandleProblemView))
 
 	// Root Redirect
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

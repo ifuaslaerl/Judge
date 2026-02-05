@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Problem {{.Letter}}</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        embed { border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Problem {{.Letter}} ({{.TimeLimit}}ms)</h1>
+        <div>
+            <a href="/dashboard">Back to Judge</a>
+        </div>
+    </div>
+
+    <embed src="/problems/{{.ID}}/pdf" width="100%" height="800px" type="application/pdf">
+    
+    <hr>
+    <h3>Submit Solution</h3>
+    <form action="/submit/{{.ID}}" method="POST" enctype="multipart/form-data">
+        <input type="file" name="code" required>
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>

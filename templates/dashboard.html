@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html>
-<head><title>Dashboard</title></head>
-<body>
-    <h1>Problem Set</h1>
-    <a href="/status">View My Submissions</a> | <a href="/logout">Logout</a>
+<head><title>Judge</title></head> <body>
+    <h1>Judge</h1>
+    <a href="/status">View My Submissions</a> | 
+    <a href="/problems/all" target="_blank">Download Problem Book</a> | <a href="/logout">Logout</a>
     <hr>
     <ul>
     {{range .}}
         <li>
             <strong>{{.Letter}}</strong> ({{.TimeLimit}}ms) 
-            <a href="/problems/{{.ID}}/pdf">[PDF]</a>
+            <a href="/problems/view/{{.ID}}">[View Problem]</a> 
             <form action="/submit/{{.ID}}" method="POST" enctype="multipart/form-data" style="display:inline;">
                 <input type="file" name="code" required>
                 <button type="submit">Submit</button>

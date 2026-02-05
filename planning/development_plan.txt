@@ -93,10 +93,10 @@ PHASE 7: FRONTEND & DEPLOYMENT
 PHASE 8: FEATURE EXPANSION & POLISH
 --------------------------------------------------------------------------------
 1. Identity & UI Updates
-   - [ ] **Database Migration:** Add `display_name` column to `users` table.
-   - [ ] **UI Refresh:** Rename "Dashboard" tab to "Judge".
-   - [ ] **Problem Viewer:** Update template to use `<embed>` tag for PDFs.
-   - [ ] **Manual Book:** Create route `/problems/all` to serve `storage/all_problems.pdf`.
+   - [x] **Database Migration:** Add `display_name` column to `users` table.
+   - [x] **UI Refresh:** Rename "Dashboard" tab to "Judge".
+   - [x] **Problem Viewer:** Update template to use `<embed>` tag for PDFs.
+   - [x] **Manual Book:** Create route `/problems/all` to serve `storage/all_problems.pdf`.
 
 2. Multi-Language Support
    - [ ] **Worker Logic:** Update `processSubmission` to detect `.py` file extension.

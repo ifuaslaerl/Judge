@@ -6,37 +6,28 @@ import (
 	"os"
 	"time"
 
-	_ "modernc.org/sqlite" // Pure Go SQLite driver
+	_ "modernc.org/sqlite"
 )
 
-// DB is the global database connection pool
 var DB *sql.DB
 
 func InitDB() {
 	var err error
 
-	// 0. Verify Directory Exists
 	if _, err := os.Stat("./storage/db"); os.IsNotExist(err) {
 		log.Fatal("ERROR: Directory './storage/db' does not exist. Please run: mkdir -p storage/db")
 	}
 
 	log.Println("Initializing Database...")
-
-	// 1. Open the database file
-	// Note: The driver name is "sqlite", not "sqlite3" for modernc
 	DB, err = sql.Open("sqlite", "./storage/db/judge.sqlite")
 	if err != nil {
 		log.Fatalf("Failed to open database struct: %v", err)
 	}
 
-	// 2. Verify connection (Ping)
-	// We verify connection immediately to catch file creation errors
 	if err = DB.Ping(); err != nil {
-		log.Fatalf("Failed to ping database (Is the path correct?): %v", err)
+		log.Fatalf("Failed to ping database: %v", err)
 	}
 
-	// 3. Enforce WAL Mode & Timeout
-	// We use a small delay to ensure the file is ready
 	time.Sleep(100 * time.Millisecond)
 	
 	if _, err := DB.Exec("PRAGMA journal_mode=WAL;"); err != nil {
@@ -46,8 +37,8 @@ func InitDB() {
 		log.Fatalf("Failed to set busy timeout: %v", err)
 	}
 
-	// 4. Create Tables
 	createSchema()
+    runMigrations() //
 
 	log.Println("SUCCESS: Database connection initialized & Schema migrated.")
 }
@@ -57,6 +48,7 @@ func createSchema() {
 	CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		username TEXT NOT NULL UNIQUE,
+        display_name TEXT DEFAULT '', -- Added for Phase 8
 		password_hash TEXT NOT NULL
 	);
 
@@ -89,4 +81,12 @@ func createSchema() {
 	if err != nil {
 		log.Fatalf("Failed to migrate schema: %v", err)
 	}
+}
+
+// runMigrations handles schema updates for existing installations
+func runMigrations() {
+    // Phase 8: Add display_name if it doesn't exist
+    // We attempt to add it; if it fails (likely because it exists), we ignore the error.
+    // In a production env, query PRAGMA table_info to be precise.
+    _, _ = DB.Exec("ALTER TABLE users ADD COLUMN display_name TEXT DEFAULT ''")
 }

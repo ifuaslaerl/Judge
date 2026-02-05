@@ -186,3 +186,43 @@ func HandlePDF(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/pdf")
 	http.ServeFile(w, r, pdfPath)
 }
+
+// Add to internal/handlers/views.go
+
+// GET /problems/all
+func HandleManualBook(w http.ResponseWriter, r *http.Request) {
+    // Serves the static manual book
+    path := "storage/all_problems.pdf"
+    if _, err := os.Stat(path); os.IsNotExist(err) {
+        http.Error(w, "Manual book not found (storage/all_problems.pdf missing)", http.StatusNotFound)
+        return
+    }
+    w.Header().Set("Content-Type", "application/pdf")
+    http.ServeFile(w, r, path)
+}
+
+// GET /problems/[id]/view
+func HandleProblemView(w http.ResponseWriter, r *http.Request) {
+    // 1. Parse ID
+    parts := strings.Split(r.URL.Path, "/")
+    if len(parts) < 4 { // /problems/1/view
+        http.Error(w, "Invalid URL", http.StatusBadRequest)
+        return
+    }
+    idStr := parts[2]
+
+    // 2. Query DB
+    var p struct {
+        ID        int
+        Letter    string
+        TimeLimit int
+    }
+    err := data.DB.QueryRow("SELECT id, letter_code, time_limit FROM problems WHERE id = ?", idStr).Scan(&p.ID, &p.Letter, &p.TimeLimit)
+    if err != nil {
+        http.Error(w, "Problem not found", http.StatusNotFound)
+        return
+    }
+
+    // 3. Render Template
+    renderTemplate(w, "problem.html", p)
+}
