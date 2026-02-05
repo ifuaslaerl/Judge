@@ -57,7 +57,7 @@ func processLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Compare Hash (Requires: go get golang.org/x/crypto/bcrypt)
+	// 2. Compare Hash
 	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)); err != nil {
 		http.Error(w, "Invalid Credentials", http.StatusUnauthorized)
 		return
@@ -70,13 +70,14 @@ func processLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 4. Set Cookie
+	// 4. Set Cookie (CORRECTED)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true, // Since we run on TLS
+		Secure:   true,      // Required for your HTTPS setup
+		MaxAge:   315360000, // 10 years in seconds (Indefinite persistence)
 	})
 
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
